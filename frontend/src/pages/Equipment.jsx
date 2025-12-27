@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Wrench, Search } from 'lucide-react';
-import { equipmentAPI } from '../services/mockBackend';
+import { equipmentAPI } from '../services/equipmentService';
 import EquipmentForm from '../components/Equipment/EquipmentForm';
 import EquipmentMaintenanceModal from '../components/Equipment/EquipmentMaintenanceModal';
 
@@ -165,7 +165,7 @@ const Equipment = () => {
                   <th>Serial Number</th>
                   <th>Department</th>
                   <th>Location</th>
-                  <th>Assigned Employee</th>
+                  <th>Assigned Technician</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>

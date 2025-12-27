@@ -1,0 +1,7 @@
+{
+  "name": "John Technician",
+  "email": "john.tech@gearguard.com",
+  "password": "password123",
+  "role": "technician",
+  "department": "Maintenance"
+}

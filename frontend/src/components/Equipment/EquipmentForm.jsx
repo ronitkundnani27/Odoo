@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { teamsAPI } from '../../services/mockBackend';
+import { equipmentAPI } from '../../services/equipmentService';
 
 const EquipmentForm = ({ equipment, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -11,26 +11,33 @@ const EquipmentForm = ({ equipment, onSubmit, onCancel }) => {
     location: '',
     department: '',
     assignedEmployee: '',
-    maintenanceTeamId: '',
-    category: ''
+    maintenanceTeamId: ''
   });
-  const [teams, setTeams] = useState([]);
+  const [dropdownData, setDropdownData] = useState({
+    departments: [],
+    maintenanceTeams: [],
+    users: []
+  });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    // Load teams for dropdown
-    const fetchTeams = async () => {
+    // Load dropdown data
+    const fetchDropdownData = async () => {
       try {
-        const response = await teamsAPI.getAll();
+        const response = await equipmentAPI.getDropdownData();
         if (response.success) {
-          setTeams(response.data);
+          setDropdownData(response.data);
+        } else {
+          setError('Failed to load form data');
         }
       } catch (error) {
-        console.error('Error fetching teams:', error);
+        console.error('Error fetching dropdown data:', error);
+        setError('Failed to load form data');
       }
     };
 
-    fetchTeams();
+    fetchDropdownData();
 
     // Pre-fill form if editing
     if (equipment) {
@@ -42,8 +49,7 @@ const EquipmentForm = ({ equipment, onSubmit, onCancel }) => {
         location: equipment.location || '',
         department: equipment.department || '',
         assignedEmployee: equipment.assignedEmployee || '',
-        maintenanceTeamId: equipment.maintenanceTeamId || '',
-        category: equipment.category || ''
+        maintenanceTeamId: equipment.maintenanceTeamId || ''
       });
     }
   }, [equipment]);
@@ -54,44 +60,24 @@ const EquipmentForm = ({ equipment, onSubmit, onCancel }) => {
       ...prev,
       [name]: value
     }));
+    // Clear error when user starts typing
+    if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     
     try {
-      // Convert maintenanceTeamId to number
-      const submitData = {
-        ...formData,
-        maintenanceTeamId: parseInt(formData.maintenanceTeamId) || null
-      };
-      
-      await onSubmit(submitData);
+      await onSubmit(formData);
     } catch (error) {
       console.error('Error submitting form:', error);
+      setError('Failed to save equipment. Please try again.');
     } finally {
       setLoading(false);
     }
   };
-
-  const departments = [
-    'Production',
-    'IT',
-    'Logistics',
-    'Maintenance',
-    'Quality Control',
-    'Administration'
-  ];
-
-  const categories = [
-    'Manufacturing',
-    'IT Equipment',
-    'Vehicle',
-    'Tool',
-    'Facility',
-    'Safety Equipment'
-  ];
 
   return (
     <div style={{
@@ -123,6 +109,20 @@ const EquipmentForm = ({ equipment, onSubmit, onCancel }) => {
         </div>
 
         <div className="card-body">
+          {error && (
+            <div style={{
+              backgroundColor: '#fef2f2',
+              color: '#dc2626',
+              padding: '12px',
+              borderRadius: '4px',
+              marginBottom: '16px',
+              fontSize: '14px',
+              border: '1px solid #fecaca'
+            }}>
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="form-group">
@@ -150,22 +150,6 @@ const EquipmentForm = ({ equipment, onSubmit, onCancel }) => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Category *</label>
-                <select
-                  name="category"
-                  className="form-control"
-                  value={formData.category}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select Category</option>
-                  {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
                 <label className="form-label">Department *</label>
                 <select
                   name="department"
@@ -175,8 +159,8 @@ const EquipmentForm = ({ equipment, onSubmit, onCancel }) => {
                   required
                 >
                   <option value="">Select Department</option>
-                  {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
+                  {dropdownData.departments.map(dept => (
+                    <option key={dept.id} value={dept.name}>{dept.name}</option>
                   ))}
                 </select>
               </div>
@@ -218,15 +202,19 @@ const EquipmentForm = ({ equipment, onSubmit, onCancel }) => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Assigned Employee</label>
-                <input
-                  type="text"
+                <label className="form-label">Assigned Technician *</label>
+                <select
                   name="assignedEmployee"
                   className="form-control"
                   value={formData.assignedEmployee}
                   onChange={handleChange}
-                  placeholder="Employee name"
-                />
+                  required
+                >
+                  <option value="">Select Technician</option>
+                  {dropdownData.users.map(user => (
+                    <option key={user.id} value={user.name}>{user.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -239,7 +227,7 @@ const EquipmentForm = ({ equipment, onSubmit, onCancel }) => {
                   required
                 >
                   <option value="">Select Maintenance Team</option>
-                  {teams.map(team => (
+                  {dropdownData.maintenanceTeams.map(team => (
                     <option key={team.id} value={team.id}>{team.name}</option>
                   ))}
                 </select>

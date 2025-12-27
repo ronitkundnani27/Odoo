@@ -65,9 +65,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authAPI.register(userData);
       if (response.success) {
-        setUser(response.data.user);
-        setIsAuthenticated(true);
-        return { success: true };
+        // Don't auto-login after registration, just return success
+        return { success: true, data: response.data };
       } else {
         return { success: false, error: response.error };
       }

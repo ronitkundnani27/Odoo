@@ -61,18 +61,6 @@ const Login = () => {
     }
   };
 
-  const demoCredentials = [
-    { email: 'admin@gearguard.com', password: 'admin123', role: 'Admin' },
-    { email: 'tech@gearguard.com', password: 'tech123', role: 'Technician' },
-    { email: 'manager@gearguard.com', password: 'manager123', role: 'Manager' }
-  ];
-
-  const fillDemoCredentials = (email, password) => {
-    setFormData({ email, password });
-    setError('');
-    setSuccessMessage('');
-  };
-
   return (
     <div style={{
       minHeight: '100vh',
@@ -229,40 +217,6 @@ const Login = () => {
               >
                 Create Account
               </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Demo Credentials */}
-        <div className="card" style={{ marginTop: '20px' }}>
-          <div className="card-header">
-            <h3 className="card-title" style={{ fontSize: '16px' }}>Demo Credentials</h3>
-          </div>
-          <div className="card-body">
-            <p style={{ 
-              margin: '0 0 12px 0', 
-              fontSize: '14px', 
-              color: '#6b7280' 
-            }}>
-              Click to use demo credentials:
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {demoCredentials.map((cred, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => fillDemoCredentials(cred.email, cred.password)}
-                  disabled={loading}
-                  style={{ 
-                    fontSize: '12px',
-                    padding: '6px 12px',
-                    textAlign: 'left'
-                  }}
-                >
-                  <strong>{cred.role}:</strong> {cred.email}
-                </button>
-              ))}
             </div>
           </div>
         </div>

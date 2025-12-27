@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, UserPlus, Settings, CheckCircle } from 'lucide-react';
-
 import { authAPI } from '../services/authService';
+import api from '../services/api';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -13,6 +13,10 @@ const Register = () => {
     role: 'technician',
     department: ''
   });
+  const [dropdownData, setDropdownData] = useState({
+    roles: [],
+    departments: []
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,6 +25,28 @@ const Register = () => {
   const [registeredEmail, setRegisteredEmail] = useState('');
 
   const navigate = useNavigate();
+
+  // Fetch roles and departments on component mount
+  useEffect(() => {
+    const fetchFormData = async () => {
+      try {
+        const response = await api.get('/auth/form-data');
+        if (response.data.success) {
+          setDropdownData(response.data.data);
+          // Set default role if available
+          if (response.data.data.roles.length > 0) {
+            const defaultRole = response.data.data.roles.find(r => r.name === 'technician') || response.data.data.roles[0];
+            setFormData(prev => ({ ...prev, role: defaultRole.name }));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching form data:', error);
+        setError('Failed to load registration form data. Please refresh the page.');
+      }
+    };
+
+    fetchFormData();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -91,22 +117,6 @@ const Register = () => {
       } 
     });
   };
-
-  const roles = [
-    { value: 'technician', label: 'Technician' },
-    { value: 'manager', label: 'Manager' },
-    { value: 'admin', label: 'Administrator' }
-  ];
-
-  const departments = [
-    'Production',
-    'IT',
-    'Logistics',
-    'Maintenance',
-    'Quality Control',
-    'Administration',
-    'Operations'
-  ];
 
   return (
     <div style={{
@@ -229,9 +239,9 @@ const Register = () => {
                         required
                         disabled={loading}
                       >
-                        {roles.map(role => (
-                          <option key={role.value} value={role.value}>
-                            {role.label}
+                        {dropdownData.roles.map(role => (
+                          <option key={role.id} value={role.name}>
+                            {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
                           </option>
                         ))}
                       </select>
@@ -247,8 +257,8 @@ const Register = () => {
                         disabled={loading}
                       >
                         <option value="">Select Department</option>
-                        {departments.map(dept => (
-                          <option key={dept} value={dept}>{dept}</option>
+                        {dropdownData.departments.map(dept => (
+                          <option key={dept.id} value={dept.name}>{dept.name}</option>
                         ))}
                       </select>
                     </div>

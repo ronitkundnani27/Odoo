@@ -136,7 +136,7 @@ const Teams = () => {
               </div>
 
               {/* Specialties */}
-              <div>
+              <div style={{ marginBottom: '16px' }}>
                 <h5 style={{ marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
                   Specialties
                 </h5>
@@ -148,6 +148,22 @@ const Teams = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Equipment Categories */}
+              {team.categories && team.categories.length > 0 && (
+                <div>
+                  <h5 style={{ marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    Equipment Categories
+                  </h5>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {team.categories.map((category, index) => (
+                      <span key={index} className="badge" style={{ backgroundColor: '#fef3c7', color: '#92400e' }}>
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}

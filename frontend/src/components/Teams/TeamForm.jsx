@@ -6,9 +6,19 @@ const TeamForm = ({ team, onSubmit, onCancel }) => {
     name: '',
     description: '',
     members: [''],
-    specialties: ['']
+    specialties: [''],
+    categories: []
   });
   const [loading, setLoading] = useState(false);
+
+  const availableCategories = [
+    'Manufacturing',
+    'IT Equipment',
+    'Vehicle',
+    'Tool',
+    'Facility',
+    'Safety Equipment'
+  ];
 
   useEffect(() => {
     if (team) {
@@ -16,7 +26,8 @@ const TeamForm = ({ team, onSubmit, onCancel }) => {
         name: team.name || '',
         description: team.description || '',
         members: team.members.length > 0 ? [...team.members] : [''],
-        specialties: team.specialties.length > 0 ? [...team.specialties] : ['']
+        specialties: team.specialties.length > 0 ? [...team.specialties] : [''],
+        categories: team.categories || []
       });
     }
   }, [team]);
@@ -52,6 +63,15 @@ const TeamForm = ({ team, onSubmit, onCancel }) => {
     }
   };
 
+  const handleCategoryChange = (category) => {
+    setFormData(prev => ({
+      ...prev,
+      categories: prev.categories.includes(category)
+        ? prev.categories.filter(c => c !== category)
+        : [...prev.categories, category]
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -61,7 +81,8 @@ const TeamForm = ({ team, onSubmit, onCancel }) => {
       const submitData = {
         ...formData,
         members: formData.members.filter(member => member.trim() !== ''),
-        specialties: formData.specialties.filter(specialty => specialty.trim() !== '')
+        specialties: formData.specialties.filter(specialty => specialty.trim() !== ''),
+        categories: formData.categories
       };
       
       await onSubmit(submitData);
@@ -200,6 +221,28 @@ const TeamForm = ({ team, onSubmit, onCancel }) => {
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Equipment Categories */}
+            <div className="form-group">
+              <label className="form-label">Equipment Categories</label>
+              <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+                Select the equipment categories this team can handle:
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                {availableCategories.map(category => (
+                  <label key={category} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.categories.includes(category)}
+                      onChange={() => handleCategoryChange(category)}
+                      style={{ marginRight: '8px' }}
+                      disabled={loading}
+                    />
+                    <span style={{ fontSize: '14px' }}>{category}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             <div className="d-flex justify-content-between" style={{ marginTop: '24px' }}>

@@ -43,6 +43,58 @@ let equipmentData = [
     maintenanceTeamId: 3,
     category: "Vehicle",
     status: "Active"
+  },
+  {
+    id: 4,
+    name: "Hydraulic Press #2",
+    serialNumber: "HYD-002-2022",
+    purchaseDate: "2022-08-15",
+    warrantyExpiry: "2025-08-15",
+    location: "Production Floor B",
+    department: "Production",
+    assignedEmployee: "Mark Johnson",
+    maintenanceTeamId: 1,
+    category: "Manufacturing",
+    status: "Active"
+  },
+  {
+    id: 5,
+    name: "Drill Set Professional",
+    serialNumber: "DRL-PRO-2023",
+    purchaseDate: "2023-03-10",
+    warrantyExpiry: "2026-03-10",
+    location: "Tool Room",
+    department: "Maintenance",
+    assignedEmployee: "Tool Manager",
+    maintenanceTeamId: 1,
+    category: "Tool",
+    status: "Active"
+  },
+  {
+    id: 6,
+    name: "Fire Extinguisher System",
+    serialNumber: "FES-001-2021",
+    purchaseDate: "2021-12-01",
+    warrantyExpiry: "2024-12-01",
+    location: "Building A - Main Floor",
+    department: "Safety",
+    assignedEmployee: "Safety Officer",
+    maintenanceTeamId: 1,
+    category: "Safety Equipment",
+    status: "Active"
+  },
+  {
+    id: 7,
+    name: "Delivery Truck #3",
+    serialNumber: "TRK-003-2022",
+    purchaseDate: "2022-05-15",
+    warrantyExpiry: "2025-05-15",
+    location: "Fleet Parking",
+    department: "Logistics",
+    assignedEmployee: "Fleet Manager",
+    maintenanceTeamId: 3,
+    category: "Vehicle",
+    status: "Active"
   }
 ];
 
@@ -52,21 +104,24 @@ let teamsData = [
     name: "Mechanical Team",
     description: "Handles mechanical equipment maintenance",
     members: ["John Doe", "Alice Brown", "Bob Miller"],
-    specialties: ["CNC Machines", "Hydraulics", "Pneumatics"]
+    specialties: ["CNC Machines", "Hydraulics", "Pneumatics", "Tools", "Facility Equipment"],
+    categories: ["Manufacturing", "Tool", "Facility", "Safety Equipment"]
   },
   {
     id: 2,
-    name: "IT Support",
+    name: "Technical Team",
     description: "Manages IT infrastructure and equipment",
     members: ["Sarah Johnson", "Tom Davis", "Lisa Chen"],
-    specialties: ["Servers", "Network Equipment", "Computers"]
+    specialties: ["Servers", "Network Equipment", "Computers", "Software"],
+    categories: ["IT Equipment"]
   },
   {
     id: 3,
-    name: "Vehicle Maintenance",
+    name: "Vehicle Team",
     description: "Maintains company vehicles and mobile equipment",
     members: ["Mike Wilson", "Dave Rodriguez", "Emma Taylor"],
-    specialties: ["Forklifts", "Trucks", "Mobile Equipment"]
+    specialties: ["Forklifts", "Trucks", "Mobile Equipment", "Fleet Maintenance"],
+    categories: ["Vehicle"]
   }
 ];
 
@@ -97,7 +152,7 @@ let requestsData = [
     equipmentName: "Server Rack #3",
     requestType: "Preventive",
     maintenanceTeamId: 2,
-    teamName: "IT Support",
+    teamName: "Technical Team",
     assignedTechnician: "Sarah Johnson",
     status: "In Progress",
     priority: "Medium",
@@ -115,7 +170,7 @@ let requestsData = [
     equipmentName: "Forklift #5",
     requestType: "Preventive",
     maintenanceTeamId: 3,
-    teamName: "Vehicle Maintenance",
+    teamName: "Vehicle Team",
     assignedTechnician: "Mike Wilson",
     status: "Repaired",
     priority: "Medium",
@@ -189,6 +244,12 @@ export const teamsAPI = {
     await delay();
     const team = teamsData.find(team => team.id === parseInt(id));
     return team ? { data: team, success: true } : { error: "Team not found", success: false };
+  },
+
+  async getByCategory(category) {
+    await delay();
+    const team = teamsData.find(team => team.categories && team.categories.includes(category));
+    return team ? { data: team, success: true } : { error: "No team found for category", success: false };
   },
 
   async create(team) {

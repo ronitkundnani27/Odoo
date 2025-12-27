@@ -17,6 +17,8 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
   });
   const [equipment, setEquipment] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [selectedEquipment, setSelectedEquipment] = useState(null);
+  const [suggestedTeam, setSuggestedTeam] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
@@ -65,16 +67,51 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
     }));
   };
 
-  const handleEquipmentChange = (e) => {
+  const handleEquipmentChange = async (e) => {
     const equipmentId = parseInt(e.target.value);
     const selectedEquipment = equipment.find(eq => eq.id === equipmentId);
     
-    setFormData(prev => ({
-      ...prev,
-      equipmentId: equipmentId,
-      // Auto-fill maintenance team based on equipment
-      maintenanceTeamId: selectedEquipment ? selectedEquipment.maintenanceTeamId : ''
-    }));
+    setSelectedEquipment(selectedEquipment);
+    
+    if (selectedEquipment) {
+      // Auto-detect team based on equipment category
+      try {
+        const teamResponse = await teamsAPI.getByCategory(selectedEquipment.category);
+        if (teamResponse.success) {
+          setSuggestedTeam(teamResponse.data);
+          setFormData(prev => ({
+            ...prev,
+            equipmentId: equipmentId,
+            maintenanceTeamId: teamResponse.data.id
+          }));
+        } else {
+          // Fallback to equipment's assigned team
+          setSuggestedTeam(null);
+          setFormData(prev => ({
+            ...prev,
+            equipmentId: equipmentId,
+            maintenanceTeamId: selectedEquipment.maintenanceTeamId || ''
+          }));
+        }
+      } catch (error) {
+        console.error('Error getting team by category:', error);
+        // Fallback to equipment's assigned team
+        setSuggestedTeam(null);
+        setFormData(prev => ({
+          ...prev,
+          equipmentId: equipmentId,
+          maintenanceTeamId: selectedEquipment.maintenanceTeamId || ''
+        }));
+      }
+    } else {
+      setSelectedEquipment(null);
+      setSuggestedTeam(null);
+      setFormData(prev => ({
+        ...prev,
+        equipmentId: equipmentId,
+        maintenanceTeamId: ''
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -194,6 +231,24 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
                     </option>
                   ))}
                 </select>
+                {selectedEquipment && (
+                  <div style={{ 
+                    marginTop: '8px', 
+                    padding: '8px', 
+                    backgroundColor: '#f0f9ff', 
+                    border: '1px solid #bae6fd',
+                    borderRadius: '4px',
+                    fontSize: '12px'
+                  }}>
+                    <div><strong>Category:</strong> {selectedEquipment.category}</div>
+                    <div><strong>Location:</strong> {selectedEquipment.location}</div>
+                    {suggestedTeam && (
+                      <div style={{ color: '#0369a1', fontWeight: '500' }}>
+                        ✓ Auto-assigned to: {suggestedTeam.name}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
@@ -225,7 +280,10 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
                   ))}
                 </select>
                 <small className="text-muted">
-                  Auto-filled based on selected equipment
+                  {suggestedTeam 
+                    ? `Auto-selected based on equipment category: ${selectedEquipment?.category}`
+                    : 'Auto-filled based on selected equipment'
+                  }
                 </small>
               </div>
 

@@ -52,12 +52,15 @@ const Calendar = () => {
     if (filterType === 'all' || filterType === 'maintenance') {
       requests.forEach(req => {
         if (req.scheduledDate) {
+          // Normalize date format
+          const dateStr = req.scheduledDate.split('T')[0];
+          
           events.push({
             id: `req-${req.id}`,
             type: 'maintenance',
-            date: req.scheduledDate,
+            date: dateStr,
             title: req.subject,
-            subtitle: req.equipmentName,
+            subtitle: req.equipmentName || 'Unknown Equipment',
             status: req.status,
             requestType: req.requestType,
             priority: req.priority,
@@ -71,14 +74,17 @@ const Calendar = () => {
     if (filterType === 'all' || filterType === 'warranty') {
       equipment.forEach(eq => {
         if (eq.warrantyExpiry) {
-          const expiryDate = new Date(eq.warrantyExpiry);
+          // Normalize date format
+          const dateStr = eq.warrantyExpiry.split('T')[0];
+          const expiryDate = new Date(dateStr);
           const today = new Date();
+          today.setHours(0, 0, 0, 0);
           const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
           
           events.push({
             id: `warranty-${eq.id}`,
             type: 'warranty',
-            date: eq.warrantyExpiry,
+            date: dateStr,
             title: `Warranty Expiry`,
             subtitle: eq.name,
             isExpiring: daysUntilExpiry <= 30 && daysUntilExpiry >= 0,
@@ -89,6 +95,7 @@ const Calendar = () => {
       });
     }
 
+    console.log('Generated calendar events:', events);
     setCalendarEvents(events);
   };
 
@@ -125,7 +132,11 @@ const Calendar = () => {
 
   const getEventsForDate = (date) => {
     const dateStr = formatDate(date);
-    return calendarEvents.filter(event => event.date === dateStr);
+    return calendarEvents.filter(event => {
+      // Handle both date string formats
+      const eventDate = event.date ? event.date.split('T')[0] : null;
+      return eventDate === dateStr;
+    });
   };
 
   const navigateMonth = (direction) => {
@@ -192,6 +203,15 @@ const Calendar = () => {
       </div>
     );
   }
+
+  // Debug info
+  console.log('Calendar Data:', {
+    requestsCount: requests.length,
+    requestsWithDates: requests.filter(r => r.scheduledDate).length,
+    equipmentCount: equipment.length,
+    equipmentWithWarranty: equipment.filter(e => e.warrantyExpiry).length,
+    eventsCount: calendarEvents.length
+  });
 
   return (
     <div>

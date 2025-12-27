@@ -17,13 +17,20 @@ const generateToken = (userId) => {
 // Signup endpoint
 router.post('/signup', async (req, res) => {
   try {
-    const { name, email, password, role, department } = req.body;
+    const { name, email, password, role, teamId } = req.body;
 
     // Validation
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
         message: 'Name, email, and password are required'
+      });
+    }
+
+    if (!teamId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select a team'
       });
     }
 
@@ -54,7 +61,7 @@ router.post('/signup', async (req, res) => {
     }
 
     // Create new user
-    const newUser = await User.create({ name, email, password, role, department });
+    const newUser = await User.create({ name, email, password, role, teamId });
     
     // Generate token
     const token = generateToken(newUser.id);
@@ -68,7 +75,9 @@ router.post('/signup', async (req, res) => {
           name: newUser.name,
           email: newUser.email,
           role: newUser.role,
-          roles: newUser.roles
+          roles: newUser.roles,
+          team: newUser.team,
+          teams: newUser.teams
         },
         token
       }
@@ -159,19 +168,19 @@ router.get('/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// Get roles and departments for registration form
+// Get roles and teams for registration form
 router.get('/form-data', async (req, res) => {
   try {
-    const [roles, departments] = await Promise.all([
+    const [roles, teams] = await Promise.all([
       User.getRoles(),
-      User.getDepartments()
+      User.getMaintenanceTeams()
     ]);
     
     res.status(200).json({
       success: true,
       data: {
         roles,
-        departments
+        teams
       }
     });
   } catch (error) {

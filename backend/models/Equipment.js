@@ -309,11 +309,17 @@ class Equipment {
         }
       }
 
-      // Seed maintenance teams
-      const teams = [
-        'Electrical Team', 'Mechanical Team', 'IT Support Team', 
-        'General Maintenance', 'Emergency Response Team'
-      ];
+      // Seed maintenance teams (only 3 specific teams)
+      // Clear all teams first (if no foreign key constraints)
+      try {
+        await pool.execute('DELETE FROM maintenance_teams');
+      } catch (error) {
+        // If delete fails due to foreign keys, just continue
+        console.log('⚠️  Cannot clear teams (foreign key constraint), will update existing');
+      }
+      
+      // Insert only the 3 teams we want
+      const teams = ['Mechanical Team', 'Technical Team', 'Vehicle Team'];
       
       for (const teamName of teams) {
         const checkQuery = 'SELECT * FROM maintenance_teams WHERE name = ?';
@@ -325,7 +331,7 @@ class Equipment {
         }
       }
 
-      console.log('✅ Initial equipment data seeded');
+      console.log('✅ Initial equipment data seeded (3 teams configured)');
     } catch (error) {
       console.error('❌ Error seeding initial data:', error.message);
     }

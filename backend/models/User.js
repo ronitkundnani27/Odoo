@@ -20,6 +20,15 @@ class User {
       )
     `;
 
+    // Create maintenance_teams table (if not exists from Equipment model)
+    const createMaintenanceTeamsTableQuery = `
+      CREATE TABLE IF NOT EXISTS maintenance_teams (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     // Create users table
     const createUsersTableQuery = `
       CREATE TABLE IF NOT EXISTS users (
@@ -44,12 +53,25 @@ class User {
         FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
       )
     `;
+
+    // Create team_members junction table
+    const createTeamMembersTableQuery = `
+      CREATE TABLE IF NOT EXISTS team_members (
+        team_id INT NOT NULL,
+        user_id INT NOT NULL,
+        PRIMARY KEY (team_id, user_id),
+        FOREIGN KEY (team_id) REFERENCES maintenance_teams(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `;
     
     try {
       await pool.execute(createRolesTableQuery);
       await pool.execute(createDepartmentsTableQuery);
+      await pool.execute(createMaintenanceTeamsTableQuery);
       await pool.execute(createUsersTableQuery);
       await pool.execute(createUserRolesTableQuery);
+      await pool.execute(createTeamMembersTableQuery);
       console.log('✅ Users table ready');
     } catch (error) {
       console.error('❌ Error creating users table:', error.message);
@@ -89,7 +111,29 @@ class User {
         }
       }
 
-      console.log('✅ Initial user data seeded');
+      // Seed maintenance teams (only 3 specific teams)
+      // Clear all teams first (if no foreign key constraints)
+      try {
+        await pool.execute('DELETE FROM maintenance_teams');
+      } catch (error) {
+        // If delete fails due to foreign keys, just continue
+        console.log('⚠️  Cannot clear teams (foreign key constraint), will update existing');
+      }
+      
+      // Insert only the 3 teams we want
+      const teams = ['Mechanical Team', 'Technical Team', 'Vehicle Team'];
+      
+      for (const teamName of teams) {
+        const checkQuery = 'SELECT * FROM maintenance_teams WHERE name = ?';
+        const [existing] = await pool.execute(checkQuery, [teamName]);
+        
+        if (existing.length === 0) {
+          const insertQuery = 'INSERT INTO maintenance_teams (name) VALUES (?)';
+          await pool.execute(insertQuery, [teamName]);
+        }
+      }
+
+      console.log('✅ Initial user data seeded (3 teams configured)');
     } catch (error) {
       console.error('❌ Error seeding initial user data:', error.message);
     }
@@ -110,6 +154,18 @@ class User {
   // Get all departments
   static async getDepartments() {
     const selectQuery = 'SELECT * FROM departments ORDER BY name';
+    
+    try {
+      const [rows] = await pool.execute(selectQuery);
+      return rows;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Get all maintenance teams
+  static async getMaintenanceTeams() {
+    const selectQuery = 'SELECT * FROM maintenance_teams ORDER BY name';
     
     try {
       const [rows] = await pool.execute(selectQuery);
@@ -145,7 +201,7 @@ class User {
 
   // Create a new user
   static async create(userData) {
-    const { name, email, password, role = 'technician', department } = userData;
+    const { name, email, password, role = 'technician', teamId } = userData;
     
     // Hash password
     const saltRounds = 12;
@@ -168,7 +224,13 @@ class User {
         await pool.execute(insertRoleQuery, [userId, roleRecord.id]);
       }
 
-      // Get the created user with role and department info
+      // Assign team to user (required)
+      if (teamId) {
+        const insertTeamQuery = 'INSERT INTO team_members (team_id, user_id) VALUES (?, ?)';
+        await pool.execute(insertTeamQuery, [teamId, userId]);
+      }
+
+      // Get the created user with role and team info
       return await this.findById(userId);
     } catch (error) {
       throw error;
@@ -231,15 +293,18 @@ class User {
     }
   }
 
-  // Find user by ID with roles
+  // Find user by ID with roles and team
   static async findById(id) {
     const selectQuery = `
       SELECT 
         u.id, u.name, u.email, u.avatar_url, u.is_active, u.created_at,
-        GROUP_CONCAT(r.name) as roles
+        GROUP_CONCAT(DISTINCT r.name) as roles,
+        GROUP_CONCAT(DISTINCT mt.name) as teams
       FROM users u
       LEFT JOIN user_roles ur ON u.id = ur.user_id
       LEFT JOIN roles r ON ur.role_id = r.id
+      LEFT JOIN team_members tm ON u.id = tm.user_id
+      LEFT JOIN maintenance_teams mt ON tm.team_id = mt.id
       WHERE u.id = ?
       GROUP BY u.id
     `;
@@ -252,7 +317,9 @@ class User {
       return {
         ...user,
         roles: user.roles ? user.roles.split(',') : [],
-        role: user.roles ? user.roles.split(',')[0] : null // Primary role
+        role: user.roles ? user.roles.split(',')[0] : null, // Primary role
+        teams: user.teams ? user.teams.split(',') : [],
+        team: user.teams ? user.teams.split(',')[0] : null // Primary team
       };
     } catch (error) {
       throw error;

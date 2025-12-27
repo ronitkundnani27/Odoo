@@ -11,11 +11,11 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     role: 'technician',
-    department: ''
+    teamId: ''
   });
   const [dropdownData, setDropdownData] = useState({
     roles: [],
-    departments: []
+    teams: []
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -83,7 +83,7 @@ const Register = () => {
         email: formData.email,
         password: formData.password,
         role: formData.role,
-        department: formData.department
+        teamId: formData.teamId ? parseInt(formData.teamId) : null
       });
 
       if (result.success) {
@@ -97,7 +97,7 @@ const Register = () => {
           password: '',
           confirmPassword: '',
           role: 'technician',
-          department: ''
+          teamId: ''
         });
       } else {
         setError(result.error);
@@ -248,17 +248,18 @@ const Register = () => {
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">Department</label>
+                      <label className="form-label">Team *</label>
                       <select
-                        name="department"
+                        name="teamId"
                         className="form-control"
-                        value={formData.department}
+                        value={formData.teamId}
                         onChange={handleChange}
+                        required
                         disabled={loading}
                       >
-                        <option value="">Select Department</option>
-                        {dropdownData.departments.map(dept => (
-                          <option key={dept.id} value={dept.name}>{dept.name}</option>
+                        <option value="">Select Team</option>
+                        {dropdownData.teams.map(team => (
+                          <option key={team.id} value={team.id}>{team.name}</option>
                         ))}
                       </select>
                     </div>

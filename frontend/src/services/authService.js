@@ -47,14 +47,14 @@ export const authAPI = {
   // Register
   async register(userData) {
     try {
-      const { name, email, password, role, department } = userData;
+      const { name, email, password, role, teamId } = userData;
       
       const response = await api.post('/auth/signup', {
         name,
         email,
         password,
         role,
-        department
+        teamId
       });
 
       if (response.data.success) {

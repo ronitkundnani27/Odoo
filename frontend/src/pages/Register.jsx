@@ -50,10 +50,21 @@ const Register = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // If role changes to admin, clear teamId
+    if (name === 'role' && value === 'admin') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        teamId: '' // Clear team for admin
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    
     // Clear error when user starts typing
     if (error) setError('');
   };
@@ -247,22 +258,25 @@ const Register = () => {
                       </select>
                     </div>
 
-                    <div className="form-group">
-                      <label className="form-label">Team *</label>
-                      <select
-                        name="teamId"
-                        className="form-control"
-                        value={formData.teamId}
-                        onChange={handleChange}
-                        required
-                        disabled={loading}
-                      >
-                        <option value="">Select Team</option>
-                        {dropdownData.teams.map(team => (
-                          <option key={team.id} value={team.id}>{team.name}</option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* Team field - only for non-admin roles */}
+                    {formData.role !== 'admin' && (
+                      <div className="form-group">
+                        <label className="form-label">Team *</label>
+                        <select
+                          name="teamId"
+                          className="form-control"
+                          value={formData.teamId}
+                          onChange={handleChange}
+                          required
+                          disabled={loading}
+                        >
+                          <option value="">Select Team</option>
+                          {dropdownData.teams.map(team => (
+                            <option key={team.id} value={team.id}>{team.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
 
                     <div className="form-group">
                       <label className="form-label">Password *</label>

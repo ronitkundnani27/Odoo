@@ -19,6 +19,8 @@ router.post('/signup', async (req, res) => {
   try {
     const { name, email, password, role, teamId } = req.body;
 
+    console.log('Signup request:', { name, email, role, teamId });
+
     // Validation
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -27,7 +29,8 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    if (!teamId) {
+    // Team is required for non-admin roles
+    if (role !== 'admin' && !teamId) {
       return res.status(400).json({
         success: false,
         message: 'Please select a team'
@@ -60,8 +63,14 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    // Create new user
-    const newUser = await User.create({ name, email, password, role, teamId });
+    // Create new user (teamId can be null for admin)
+    const newUser = await User.create({ 
+      name, 
+      email, 
+      password, 
+      role, 
+      teamId: teamId || null 
+    });
     
     // Generate token
     const token = generateToken(newUser.id);
@@ -87,7 +96,7 @@ router.post('/signup', async (req, res) => {
     console.error('Signup error:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: error.message || 'Internal server error'
     });
   }
 });

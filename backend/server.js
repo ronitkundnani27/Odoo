@@ -5,8 +5,10 @@ require('dotenv').config();
 const { testConnection } = require('./config/database');
 const User = require('./models/User');
 const Equipment = require('./models/Equipment');
+const MaintenanceRequest = require('./models/MaintenanceRequest');
 const authRoutes = require('./routes/auth');
 const equipmentRoutes = require('./routes/equipment');
+const maintenanceRequestsRoutes = require('./routes/maintenanceRequests');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/equipment', equipmentRoutes);
+app.use('/api/maintenance-requests', maintenanceRequestsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -60,6 +63,8 @@ const startServer = async () => {
     await User.seedInitialData();
     await Equipment.createTable();
     await Equipment.seedInitialData();
+    await MaintenanceRequest.createTables();
+    await MaintenanceRequest.seedInitialData();
     
     // Start server
     app.listen(PORT, () => {

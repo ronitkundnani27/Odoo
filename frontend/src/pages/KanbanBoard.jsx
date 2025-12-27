@@ -15,7 +15,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { requestsAPI } from '../services/mockBackend';
+import { maintenanceRequestAPI } from '../services/maintenanceRequestService';
 import KanbanColumn from '../components/Kanban/KanbanColumn';
 import KanbanCard from '../components/Kanban/KanbanCard';
 import RequestForm from '../components/Requests/RequestForm';
@@ -26,7 +26,6 @@ const KanbanBoard = () => {
   const [showForm, setShowForm] = useState(false);
   const [activeId, setActiveId] = useState(null);
   const [filterTeam, setFilterTeam] = useState('');
-  const [filterPriority, setFilterPriority] = useState('');
 
   const columns = [
     { id: 'New', title: 'New', color: '#3b82f6' },
@@ -49,7 +48,7 @@ const KanbanBoard = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const response = await requestsAPI.getAll();
+      const response = await maintenanceRequestAPI.getAll();
       if (response.success) {
         setRequests(response.data);
       }
@@ -91,26 +90,32 @@ const KanbanBoard = () => {
     // Update the request status if it changed
     if (activeRequest.status !== newStatus) {
       try {
-        // This mock function will be replaced by real API call
-        const response = await requestsAPI.updateStatus(activeRequest.id, newStatus);
+        // Update status in database using optimized endpoint
+        const response = await maintenanceRequestAPI.updateStatus(activeRequest.id, newStatus);
+        
         if (response.success) {
+          // Update local state with new status
           setRequests(prev => prev.map(req => 
             req.id === activeRequest.id 
-              ? { ...req, status: newStatus, ...response.data }
+              ? { ...req, status: newStatus }
               : req
           ));
+          
+          console.log(`✅ Request #${activeRequest.id} moved to ${newStatus}`);
         }
       } catch (error) {
         console.error('Error updating request status:', error);
+        // Optionally show error notification to user
+        alert('Failed to update request status. Please try again.');
       }
     }
   };
 
   const handleFormSubmit = async (formData) => {
     try {
-      const response = await requestsAPI.create(formData);
+      const response = await maintenanceRequestAPI.create(formData);
       if (response.success) {
-        setRequests(prev => [...prev, response.data]);
+        await fetchRequests(); // Refresh the list
         setShowForm(false);
       }
     } catch (error) {
@@ -121,8 +126,7 @@ const KanbanBoard = () => {
   // Filter requests
   const filteredRequests = requests.filter(request => {
     const matchesTeam = !filterTeam || request.teamName === filterTeam;
-    const matchesPriority = !filterPriority || request.priority === filterPriority;
-    return matchesTeam && matchesPriority;
+    return matchesTeam;
   });
 
   // Group requests by status
@@ -131,9 +135,8 @@ const KanbanBoard = () => {
     return acc;
   }, {});
 
-  // Get unique teams and priorities for filters
-  const teams = [...new Set(requests.map(req => req.teamName))];
-  const priorities = ['High', 'Medium', 'Low'];
+  // Get unique teams for filters
+  const teams = [...new Set(requests.map(req => req.teamName).filter(Boolean))];
 
   const activeRequest = requests.find(req => req.id === parseInt(activeId));
 
@@ -173,27 +176,12 @@ const KanbanBoard = () => {
                 ))}
               </select>
             </div>
-            <div className="form-group" style={{ margin: 0, minWidth: '150px' }}>
-              <select
-                className="form-control"
-                value={filterPriority}
-                onChange={(e) => setFilterPriority(e.target.value)}
-              >
-                <option value="">All Priorities</option>
-                {priorities.map(priority => (
-                  <option key={priority} value={priority}>{priority}</option>
-                ))}
-              </select>
-            </div>
-            {(filterTeam || filterPriority) && (
+            {filterTeam && (
               <button
                 className="btn btn-secondary"
-                onClick={() => {
-                  setFilterTeam('');
-                  setFilterPriority('');
-                }}
+                onClick={() => setFilterTeam('')}
               >
-                Clear Filters
+                Clear Filter
               </button>
             )}
           </div>

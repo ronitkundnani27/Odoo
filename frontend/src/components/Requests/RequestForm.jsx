@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { equipmentAPI, teamsAPI } from '../../services/mockBackend';
+import { maintenanceRequestAPI } from '../../services/maintenanceRequestService';
 
 const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultType = 'Corrective' }) => {
   const [formData, setFormData] = useState({
@@ -8,33 +8,36 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
     description: '',
     equipmentId: '',
     requestType: defaultType,
-    maintenanceTeamId: '',
-    assignedTechnician: '',
-    priority: 'Medium',
+    teamId: '',
+    assignedTo: '',
     scheduledDate: defaultDate,
-    hoursSpent: 0,
     status: 'New'
   });
-  const [equipment, setEquipment] = useState([]);
-  const [teams, setTeams] = useState([]);
+  const [dropdownData, setDropdownData] = useState({
+    equipment: [],
+    maintenanceTeams: [],
+    users: [],
+    statuses: []
+  });
   const [selectedEquipment, setSelectedEquipment] = useState(null);
-  const [suggestedTeam, setSuggestedTeam] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoadingData(true);
-        const [equipmentRes, teamsRes] = await Promise.all([
-          equipmentAPI.getAll(),
-          teamsAPI.getAll()
-        ]);
+        const response = await maintenanceRequestAPI.getDropdownData();
 
-        if (equipmentRes.success) setEquipment(equipmentRes.data);
-        if (teamsRes.success) setTeams(teamsRes.data);
+        if (response.success) {
+          setDropdownData(response.data);
+        } else {
+          setError('Failed to load form data');
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
+        setError('Failed to load form data');
       } finally {
         setLoadingData(false);
       }
@@ -49,13 +52,17 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
         description: request.description || '',
         equipmentId: request.equipmentId || '',
         requestType: request.requestType || 'Corrective',
-        maintenanceTeamId: request.maintenanceTeamId || '',
-        assignedTechnician: request.assignedTechnician || '',
-        priority: request.priority || 'Medium',
+        teamId: request.teamId || '',
+        assignedTo: request.assignedTo || '',
         scheduledDate: request.scheduledDate || '',
-        hoursSpent: request.hoursSpent || 0,
         status: request.status || 'New'
       });
+
+      // Set selected equipment for editing
+      if (request.equipmentId && dropdownData.equipment.length > 0) {
+        const equipment = dropdownData.equipment.find(eq => eq.id === request.equipmentId);
+        setSelectedEquipment(equipment);
+      }
     }
   }, [request]);
 
@@ -65,51 +72,29 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
       ...prev,
       [name]: value
     }));
+    // Clear error when user starts typing
+    if (error) setError('');
   };
 
-  const handleEquipmentChange = async (e) => {
+  const handleEquipmentChange = (e) => {
     const equipmentId = parseInt(e.target.value);
-    const selectedEquipment = equipment.find(eq => eq.id === equipmentId);
+    const equipment = dropdownData.equipment.find(eq => eq.id === equipmentId);
     
-    setSelectedEquipment(selectedEquipment);
+    setSelectedEquipment(equipment);
     
-    if (selectedEquipment) {
-      // Auto-detect team based on equipment category
-      try {
-        const teamResponse = await teamsAPI.getByCategory(selectedEquipment.category);
-        if (teamResponse.success) {
-          setSuggestedTeam(teamResponse.data);
-          setFormData(prev => ({
-            ...prev,
-            equipmentId: equipmentId,
-            maintenanceTeamId: teamResponse.data.id
-          }));
-        } else {
-          // Fallback to equipment's assigned team
-          setSuggestedTeam(null);
-          setFormData(prev => ({
-            ...prev,
-            equipmentId: equipmentId,
-            maintenanceTeamId: selectedEquipment.maintenanceTeamId || ''
-          }));
-        }
-      } catch (error) {
-        console.error('Error getting team by category:', error);
-        // Fallback to equipment's assigned team
-        setSuggestedTeam(null);
-        setFormData(prev => ({
-          ...prev,
-          equipmentId: equipmentId,
-          maintenanceTeamId: selectedEquipment.maintenanceTeamId || ''
-        }));
-      }
-    } else {
-      setSelectedEquipment(null);
-      setSuggestedTeam(null);
+    if (equipment) {
+      // Auto-fill maintenance team from equipment's assigned team
       setFormData(prev => ({
         ...prev,
         equipmentId: equipmentId,
-        maintenanceTeamId: ''
+        teamId: equipment.maintenanceTeamId || ''
+      }));
+    } else {
+      setSelectedEquipment(null);
+      setFormData(prev => ({
+        ...prev,
+        equipmentId: equipmentId,
+        teamId: ''
       }));
     }
   };
@@ -117,18 +102,13 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     
     try {
-      const submitData = {
-        ...formData,
-        equipmentId: parseInt(formData.equipmentId),
-        maintenanceTeamId: parseInt(formData.maintenanceTeamId),
-        hoursSpent: parseFloat(formData.hoursSpent) || 0
-      };
-      
-      await onSubmit(submitData);
+      await onSubmit(formData);
     } catch (error) {
       console.error('Error submitting form:', error);
+      setError('Failed to save request. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -188,6 +168,20 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
         </div>
 
         <div className="card-body">
+          {error && (
+            <div style={{
+              backgroundColor: '#fef2f2',
+              color: '#dc2626',
+              padding: '12px',
+              borderRadius: '4px',
+              marginBottom: '16px',
+              fontSize: '14px',
+              border: '1px solid #fecaca'
+            }}>
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -225,7 +219,7 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
                   required
                 >
                   <option value="">Select Equipment</option>
-                  {equipment.map(eq => (
+                  {dropdownData.equipment.map(eq => (
                     <option key={eq.id} value={eq.id}>
                       {eq.name} - {eq.serialNumber}
                     </option>
@@ -240,13 +234,11 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
                     borderRadius: '4px',
                     fontSize: '12px'
                   }}>
-                    <div><strong>Category:</strong> {selectedEquipment.category}</div>
                     <div><strong>Location:</strong> {selectedEquipment.location}</div>
-                    {suggestedTeam && (
-                      <div style={{ color: '#0369a1', fontWeight: '500' }}>
-                        ✓ Auto-assigned to: {suggestedTeam.name}
-                      </div>
-                    )}
+                    <div><strong>Department:</strong> {selectedEquipment.department}</div>
+                    <div style={{ color: '#0369a1', fontWeight: '500' }}>
+                      ✓ Auto-assigned team: {selectedEquipment.maintenanceTeam}
+                    </div>
                   </div>
                 )}
               </div>
@@ -268,37 +260,34 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
               <div className="form-group">
                 <label className="form-label">Maintenance Team *</label>
                 <select
-                  name="maintenanceTeamId"
+                  name="teamId"
                   className="form-control"
-                  value={formData.maintenanceTeamId}
+                  value={formData.teamId}
                   onChange={handleChange}
                   required
                 >
                   <option value="">Select Team</option>
-                  {teams.map(team => (
+                  {dropdownData.maintenanceTeams.map(team => (
                     <option key={team.id} value={team.id}>{team.name}</option>
                   ))}
                 </select>
                 <small className="text-muted">
-                  {suggestedTeam 
-                    ? `Auto-selected based on equipment category: ${selectedEquipment?.category}`
-                    : 'Auto-filled based on selected equipment'
-                  }
+                  Auto-filled based on selected equipment
                 </small>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Priority *</label>
+                <label className="form-label">Assigned Technician</label>
                 <select
-                  name="priority"
+                  name="assignedTo"
                   className="form-control"
-                  value={formData.priority}
+                  value={formData.assignedTo}
                   onChange={handleChange}
-                  required
                 >
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
+                  <option value="">Unassigned</option>
+                  {dropdownData.users.map(user => (
+                    <option key={user.id} value={user.id}>{user.name}</option>
+                  ))}
                 </select>
               </div>
 
@@ -316,49 +305,20 @@ const RequestForm = ({ request, onSubmit, onCancel, defaultDate = '', defaultTyp
                 </div>
               )}
 
-              <div className="form-group">
-                <label className="form-label">Assigned Technician</label>
-                <input
-                  type="text"
-                  name="assignedTechnician"
-                  className="form-control"
-                  value={formData.assignedTechnician}
-                  onChange={handleChange}
-                  placeholder="Technician name"
-                />
-              </div>
-
               {request && (
-                <>
-                  <div className="form-group">
-                    <label className="form-label">Status</label>
-                    <select
-                      name="status"
-                      className="form-control"
-                      value={formData.status}
-                      onChange={handleChange}
-                    >
-                      <option value="New">New</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Repaired">Repaired</option>
-                      <option value="Scrap">Scrap</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Hours Spent</label>
-                    <input
-                      type="number"
-                      name="hoursSpent"
-                      className="form-control"
-                      value={formData.hoursSpent}
-                      onChange={handleChange}
-                      min="0"
-                      step="0.5"
-                      placeholder="0"
-                    />
-                  </div>
-                </>
+                <div className="form-group">
+                  <label className="form-label">Status</label>
+                  <select
+                    name="status"
+                    className="form-control"
+                    value={formData.status}
+                    onChange={handleChange}
+                  >
+                    {dropdownData.statuses.map(status => (
+                      <option key={status.id} value={status.name}>{status.name}</option>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
 

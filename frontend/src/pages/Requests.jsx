@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
-import { requestsAPI } from '../services/mockBackend';
+import { maintenanceRequestAPI } from '../services/maintenanceRequestService';
 import RequestForm from '../components/Requests/RequestForm';
 
 const Requests = () => {
@@ -20,7 +20,7 @@ const Requests = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const response = await requestsAPI.getAll();
+      const response = await maintenanceRequestAPI.getAll();
       if (response.success) {
         setRequests(response.data);
       }
@@ -44,7 +44,7 @@ const Requests = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this request?')) {
       try {
-        const response = await requestsAPI.delete(id);
+        const response = await maintenanceRequestAPI.delete(id);
         if (response.success) {
           setRequests(requests.filter(req => req.id !== id));
         }
@@ -58,9 +58,9 @@ const Requests = () => {
     try {
       let response;
       if (editingRequest) {
-        response = await requestsAPI.update(editingRequest.id, formData);
+        response = await maintenanceRequestAPI.update(editingRequest.id, formData);
       } else {
-        response = await requestsAPI.create(formData);
+        response = await maintenanceRequestAPI.create(formData);
       }
 
       if (response.success) {
@@ -261,7 +261,7 @@ const Requests = () => {
                       </span>
                     </td>
                     <td>{request.assignedTechnician || 'Unassigned'}</td>
-                    <td>{new Date(request.createdDate).toLocaleDateString()}</td>
+                    <td>{new Date(request.createdAt).toLocaleDateString()}</td>
                     <td>
                       <div className="d-flex" style={{ gap: '8px' }}>
                         <button

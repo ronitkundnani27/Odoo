@@ -41,7 +41,6 @@ const KanbanCard = ({ request, isDragging = false }) => {
   return (
     <div
       ref={setNodeRef}
-      style={style}
       {...attributes}
       {...listeners}
       className="card"
